@@ -1,5 +1,6 @@
 import httpx
 import datetime
+from asyncio import CancelledError
 
 # import aiohttp
 # from stat import Stat
@@ -61,6 +62,8 @@ class Website:
             next_ping_time = self.get_next_ping_time()
 
             while True:
+
+
                 if next_ping_time <= datetime.datetime.now():
                     # asyncio.sleep(self.check_interval)
                     
@@ -68,6 +71,7 @@ class Website:
                     
                     print(f"Pinged {self.url}:{r} in {str(r.elapsed)}.")
                     next_ping_time = self.get_next_ping_time(next_ping_time)
+
 
     async def ping_url(self, client, url) -> None:
         """

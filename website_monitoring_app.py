@@ -45,7 +45,10 @@ async def monitor_websites(websites_to_monitor):
 
     print(f"Beginning website monitoring...")
 
+
     await asyncio.gather(*coros)
+
+
 
 
 if __name__ == "__main__":
@@ -54,7 +57,14 @@ if __name__ == "__main__":
 
     websites_to_monitor = get_websites_to_monitor()
 
-    asyncio.run(monitor_websites(websites_to_monitor))
+    try:
+        asyncio.run(monitor_websites(websites_to_monitor))
+    
+    except KeyboardInterrupt:
+
+        print(f"{SINGLE_LINE}\n{GOODBYE_MSG}\n{BOLD_LINE}")
+
+
 
 
 """
