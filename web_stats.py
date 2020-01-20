@@ -8,7 +8,9 @@ class WebStat:
 
         PARAMETERS:
         max_observation_window:
-            In seconds. Datapoints older than this are discarded.
+            A negative integer representing the number of seconds
+            of historical datapoints should be kept in self.data_points.
+
             Defaults to 10 minutes.
         """
         self.data_points = deque()
@@ -26,31 +28,30 @@ class WebStat:
         RETURNS: None
         YIELDS: datapoint dictionaries
         """
-        datapoints_since_timeboundary = (
-            dp for dp in self.data_points
-            if not
-            self.is_older_than_threshold(
-                dp['received_at'], threshold_seconds_ago=threshold_seconds_ago
-                )
-        )
+        for datapoint in self.data_points:
 
-        for datapoint in datapoints_since_timeboundary:
-            yield datapoint
+            datapoint_too_old = self.is_older_than_threshold(
+                datapoint["received_at"], threshold_seconds_ago=threshold_seconds_ago
+            )
 
-    def get_max_response_time(self, time_boundary: int):
+            if not datapoint_too_old:
+                yield datapoint
+
+    def get_max_response_time(self, threshold_seconds_ago: int):
         """
         Iterates over datapoints finding and returning the max response time.
 
-        PARAMETERS: time_boundary: Include data within this number of minutes
+        PARAMETERS: threshold_seconds_ago: Include data since this number of seconds
         RETURNS: float
         """
-        timebound_datapoints = \
-            self.get_datapoints_since_time_boundary(time_boundary)
+        timebound_datapoints = self.get_datapoints_since_time_boundary(
+            threshold_seconds_ago
+        )
 
         max_response_time = None
 
         for dp in timebound_datapoints:
-            
+
             if max_response_time:
                 max_response_time = max(dp["response_time"], max_response_time)
             else:
@@ -58,50 +59,50 @@ class WebStat:
 
         return max_response_time
 
-    def get_avg_response_time(self, time_boundary: int) -> datetime.timedelta:
+    def get_avg_response_time(self, threshold_seconds_ago: int) -> datetime.timedelta:
         """
         Iterates over datapoints building average response time.
 
-        PARAMETERS: time_boundary: In seconds. Include data within this number of minutes
+        PARAMETERS: threshold_seconds_ago: Negative integer representing
+                    to number of seconds ago from which to include data_points
+
         RETURNS: datetime.timedelta
         """
-        timebound_datapoints = \
-            self.get_datapoints_since_time_boundary(time_boundary)
+        timebound_datapoints = self.get_datapoints_since_time_boundary(
+            threshold_seconds_ago
+        )
         response_time_sum = None
         datapoint_count = 0
         avg_response_time = None
 
         for dp in timebound_datapoints:
-            try:
+            datapoint_count += 1
 
-                if response_time_sum:
-                    response_time_sum += dp["response_time"]
-                else:
-                    response_time_sum = dp["response_time"]
+            if response_time_sum:
+                response_time_sum += dp["response_time"]
+            else:
+                response_time_sum = dp["response_time"]
 
-                datapoint_count += 1
-
-                avg_response_time = response_time_sum / datapoint_count
-
-            except ZeroDivisionError:
-                pass
+        try:
+            avg_response_time = response_time_sum / datapoint_count
+        except (ZeroDivisionError, TypeError) as e:
+            avg_response_time = None
 
         return avg_response_time
 
-    def get_availability(self, time_boundary: int):
+    def get_availability(self, threshold_seconds_ago: int):
         """
         Iterates over datapoints. Where response_codes are equal to 200
         the website is considered to be available. In any other case 
         the website is considered that the website is down.
 
-        PARAMETERS: time_boundary: Include data within this number of minutes
+        PARAMETERS: threshold_seconds_ago: Include data since this number of seconds
         RETURNS: float
         """
-        timebound_datapoints = \
-            self.get_datapoints_since_time_boundary(
-                #datapoint_datetime=datetime.datetime.now(),
-                threshold_seconds_ago=time_boundary
-            )
+        timebound_datapoints = self.get_datapoints_since_time_boundary(
+            # datapoint_datetime=datetime.datetime.now(),
+            threshold_seconds_ago=threshold_seconds_ago
+        )
         available_count = 0
         datapoint_count = 0
 
@@ -156,23 +157,25 @@ class WebStat:
                 + "Stat classes mandatory_datapoint_keys"
             )
 
-    def is_older_than_threshold(self, datapoint_datetime: datetime,
-                                threshold_seconds_ago: int = None):
+    def is_older_than_threshold(
+        self, datapoint_datetime: datetime, threshold_seconds_ago: int = None
+    ):
         """
         Returns True if passed parameter falls outside time peridod
         defined by the threshold_minutes_ago parameter. 
         If the threshold_minutes_ago parameter is not passed,
         the class instance's max_observed_time is used as the threshold.
 
+        
+
         PARAMETERS: datapoint_datetime
         RETURNS: bool
         """
         if not threshold_seconds_ago:
             threshold_seconds_ago = self.max_observation_window
-        
+
         now = datetime.datetime.now()
-        threshold = \
-            now + datetime.timedelta(seconds=threshold_seconds_ago)
+        threshold = now + datetime.timedelta(seconds=threshold_seconds_ago)
         out_of_time_bounds = datapoint_datetime < threshold
         return out_of_time_bounds
 
@@ -186,5 +189,5 @@ class WebStat:
         RETURNS: None
         """
 
-        while self.is_older_than_threshold(self.data_points[0]['received_at']):
+        while self.is_older_than_threshold(self.data_points[0]["received_at"]):
             self.data_points.popleft()

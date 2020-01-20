@@ -10,25 +10,16 @@ class Website:
         """
         """
         self.validate_url(url)
-
-        if self.valid_url:
-            self.url = url
-            self.check_interval = check_interval
-            self.stats = WebStat()
+        self.url = url
+        self.check_interval = check_interval
+        self.stats = WebStat()
 
     def validate_url(self, url):
         try:
             # Test url connection
             _ = httpx.get(url)
-            self.valid_url = True
         except Exception:
-            print(
-                "I'm not able to reach that URL.\n"
-                + "Please revise it, including 'http://'"
-                + " or 'https://' as appropriate)."
-            )
-            self.valid_url = False
-            return
+            raise Exception("URL error")
 
     def get_relative_datetime(
         self, reference_datetime: datetime = None, timedelta_in_seconds: int = None
@@ -55,7 +46,7 @@ class Website:
 
         return reference_datetime + datetime.timedelta(seconds=timedelta_in_seconds)
 
-    async def generate_update(self, timespan: int, writer: ConsoleWriter) -> None:
+    async def generate_update(self, timespan: int, writer: ConsoleWriter, recurrence_in_seconds: int) -> None:
         """
         Generates a string describing the stats
         of the Website instance over the period
@@ -67,38 +58,35 @@ class Website:
             Represents how far back in the raw data
             the update should report on e.g timespan
             = 60 to report on the past 60 seconds of datapoints.
+            recurrence_in_seconds: How long to wait after the generation of one
+            update to generate the next one
 
         RETURNS: None
         """
         report_time = datetime.datetime.now()
 
-        report_due = report_time <= datetime.datetime.now()
-
-        print("trying")
         while True:
             
-            if report_due and bool(self.stats.data_points):
+            #report_due = report_time <= datetime.datetime.now()
+            if (report_time <= datetime.datetime.now()) and bool(self.stats.data_points):
                 availability = self.stats.get_availability(timespan)
                 avg_response_time = self.stats.get_avg_response_time(timespan)
                 max_response_time = self.stats.get_max_response_time(timespan)
 
                 # Generate report string
                 update_string = (
-                    f"{self.url} ||availability:{availability}\n"
-                    + f"max_response_time{max_response_time}\n"
-                    + f"avg_response_time{avg_response_time}"
+                    f"|{self.url}|\navailability: {availability:.0%}\n"
+                    + f"max_response_time: {max_response_time}\n"
+                    + f"avg_response_time: {avg_response_time}"
                 )
 
                 # Set next report time
-                report_due = self.get_relative_datetime(
-                    reference_datetime=report_time, timedelta_in_seconds=timespan
-                )
+                report_time = report_time + datetime.timedelta(seconds=recurrence_in_seconds)
 
                 writer.write_update(update=update_string)
+
             else:
-                print("Empty aueue")
-            
-            await asyncio.sleep(1)
+                await asyncio.sleep(1)
 
 
     async def monitor_website(self) -> None:
@@ -132,10 +120,8 @@ class Website:
                     #print(f"       Pinged {self.url}:{r} in {str(r.elapsed)}.")
 
                     # Move ping_time forward by the instances check_interval
-                    ping_time = self.get_relative_datetime(
-                        reference_datetime=ping_time,
-                        timedelta_in_seconds=self.check_interval,
-                    )
+                    ping_time = ping_time + datetime.timedelta(seconds=self.check_interval)
+                    
                 else:
                     await asyncio.sleep(1)
 
