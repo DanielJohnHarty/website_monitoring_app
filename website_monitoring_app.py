@@ -41,7 +41,8 @@ class App:
             website_instance = self.create_website()
             if website_instance:
                 websites.append(website_instance)
-                print(f"Your website has been added to the monitoring list.")
+                self.console_writer.add_dashboard(website_instance.dashboard)
+                print(f"Your website has been added to the monitoring list")
 
             if not self.user_wants_more(websites):
                 break
@@ -173,13 +174,11 @@ class App:
 
 if __name__ == "__main__":
 
-    # Instantiate app
-
+    # Define reporting schedules
     schedule1 = {"frequency": 10, "timeframe": -600}
-
     schedule2 = {"frequency": 60, "timeframe": -60*60}
-
     schedules = [schedule1, schedule2]
 
+    # Instantiate app
     app = App()
     app.start_app(schedules=schedules)

@@ -3,6 +3,7 @@ import datetime
 from web_stats import WebStat
 import asyncio
 from console_writer import ConsoleWriter
+from console_writer import WebPerformanceDashboard
 
 
 class Website:
@@ -13,11 +14,11 @@ class Website:
         # Both raise exceptions if not compliant
         self.validate_url(url)
         self.validate_check_interval(check_interval)
-        
         self.url = url
         self.check_interval = check_interval
-
         self.stats = WebStat(max_observation_window=-600)
+
+        self.dashboard = WebPerformanceDashboard()
 
     def validate_url(self, url):
         try:
@@ -85,23 +86,37 @@ class Website:
             await self.schedule_report(freq, timeframe, writer)
 
     async def schedule_report(self, delay, timeframe, writer):
+        """
+        Calls produce_report after a delay of 'delay' seconds, then recursively calls itself.
+        Effect of infinite calls of the schedule report function. 
+        
+        PARAMETERS: delay: int, how long to wait before producing the report
+                    timeframe: negative int, how many seconds ago is the data
+                                cut off date
+                    writer: ConsoleWriter instance which preforms all writing
+                            command line.
+        """
         await asyncio.sleep(delay)
         self.produce_report(timeframe, writer)
         asyncio.create_task(self.schedule_report(delay, timeframe, writer))
+        # After creating a new task, end the current one.
         return
     
     def produce_report(self, timeframe, writer):
+        """
+        Retrieves updated stats from the self.stats instance
+        and forwards to the ConsoleWriter instance writer
+        for formatting before writing to the console
 
-        data = {'url': self.url,
-                'availability':
-                self.stats.get_availability(timeframe),
-                'avg_response_time':
-                self.stats.get_avg_response_time(timeframe),
-                'max_response_time':
-                self.stats.get_max_response_time(timeframe)}
+        PARAMETERS: timespan: In seconds as int e.g. 
+                                -60 datapoints from previous minute
+                             writer: ConsoleWriter instance responsible 
+                                formatting reports and writing to the console
+        """
+        updated_stats = self.stats.get_updated_stats(timeframe=timeframe)
+        updated_stats['url'] = self.url
 
-        writer.write_update(data=data)
-
+        writer.update(data=updated_stats, dashboard=self.dashboard)
 
     async def monitor_website(self) -> None:
         """
@@ -121,7 +136,6 @@ class Website:
 
                 if ping_time <= datetime.datetime.now():
 
-                    #r = await self.ping_url(client, self.url)
                     r = await client.get(self.url, timeout=None)
 
                     datapoint = {
@@ -131,10 +145,9 @@ class Website:
 
                     self.stats.update(datapoint)
 
-                    #print(f"       Pinged {self.url}:{r} in {str(r.elapsed)}.")
-
                     # Move ping_time forward by the instances check_interval
-                    ping_time = ping_time + datetime.timedelta(seconds=self.check_interval)
+                    ping_time = ping_time +\
+                        datetime.timedelta(seconds=self.check_interval)
                     
                 else:
                     await asyncio.sleep(1)
@@ -148,8 +161,5 @@ class Website:
         PARAMETERS: None
         RETURNS: None
         """
-        # async with client.get(url) as response:
-        #   return await response
-
         return await client.get(url, timeout=None)
 

@@ -191,3 +191,13 @@ class WebStat:
 
         while self.is_older_than_threshold(self.data_points[0]["received_at"]):
             self.data_points.popleft()
+
+    def get_updated_stats(self, timeframe):
+
+        updated_stats = {
+            "availability": self.get_availability(timeframe),
+            "avg_response_time": self.get_avg_response_time(timeframe),
+            "max_response_time": self.get_max_response_time(timeframe),
+        }
+
+        return updated_stats
