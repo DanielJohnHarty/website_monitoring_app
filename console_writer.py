@@ -38,4 +38,3 @@ class ConsoleWriter:
 
         if update_to_persist:
             self.persisted_messages.append(update)
-        

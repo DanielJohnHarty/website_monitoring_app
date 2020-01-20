@@ -10,6 +10,7 @@ class Website:
         """
         """
         self.validate_url(url)
+        self.validate_check_interval(check_interval)
         self.url = url
         self.check_interval = check_interval
         self.stats = WebStat()
@@ -20,6 +21,10 @@ class Website:
             _ = httpx.get(url)
         except Exception:
             raise Exception("URL error")
+
+    def validate_check_interval(self, check_interval):
+        if check_interval < 1:
+            raise Exception("check_interval must be a positive integer")
 
     def get_relative_datetime(
         self, reference_datetime: datetime = None, timedelta_in_seconds: int = None
