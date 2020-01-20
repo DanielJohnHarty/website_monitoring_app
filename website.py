@@ -8,12 +8,16 @@ from console_writer import ConsoleWriter
 class Website:
     def __init__(self, url=None, check_interval=None):
         """
+        PARAMETERS: url: String. Must include protocol prefix e.g. http://
         """
+        # Both raise exceptions if not compliant
         self.validate_url(url)
         self.validate_check_interval(check_interval)
+        
         self.url = url
         self.check_interval = check_interval
-        self.stats = WebStat()
+
+        self.stats = WebStat(max_observation_window=-600)
 
     def validate_url(self, url):
         try:
@@ -51,7 +55,9 @@ class Website:
 
         return reference_datetime + datetime.timedelta(seconds=timedelta_in_seconds)
 
-    async def generate_update(self, timespan: int, writer: ConsoleWriter, recurrence_in_seconds: int) -> None:
+    async def generate_update(self, timespan: int,
+                              writer: ConsoleWriter,
+                              schedules: list) -> None:
         """
         Generates a string describing the stats
         of the Website instance over the period
@@ -63,35 +69,40 @@ class Website:
             Represents how far back in the raw data
             the update should report on e.g timespan
             = 60 to report on the past 60 seconds of datapoints.
-            recurrence_in_seconds: How long to wait after the generation of one
-            update to generate the next one
+
+            recurrence_in_seconds: List of integers specifying long to wait after the generation of one
+                                   update to generate the next one
+
+            timeframes: a list of integers representing the number of 
+                        seconds to report over. [60, 600] means to report
+                        over both the past minute and the past 10 minutes
 
         RETURNS: None
         """
-        report_time = datetime.datetime.now()
+        for s in schedules:
+            freq = s['frequency'] # How often there is an update on screen
+            timeframe = s['timeframe'] # What timeframe of data to be reported on
+            await self.get_update_coro(freq, timeframe, writer)
 
-        while True:
-            
-            #report_due = report_time <= datetime.datetime.now()
-            if (report_time <= datetime.datetime.now()) and bool(self.stats.data_points):
-                availability = self.stats.get_availability(timespan)
-                avg_response_time = self.stats.get_avg_response_time(timespan)
-                max_response_time = self.stats.get_max_response_time(timespan)
+    async def get_update_coro(self, delay, timeframe, writer):
+        await asyncio.sleep(delay)
+        self.produce_report(timeframe, writer)
+        asyncio.create_task(self.get_update_coro(delay, timeframe, writer))
+        return
+    
+    def produce_report(self, timeframe, writer):
+        availability = self.stats.get_availability(timeframe)
+        avg_response_time = self.stats.get_avg_response_time(timeframe)
+        max_response_time = self.stats.get_max_response_time(timeframe)
 
-                # Generate report string
-                update_string = (
-                    f"|{self.url}|\navailability: {availability:.0%}\n"
-                    + f"max_response_time: {max_response_time}\n"
-                    + f"avg_response_time: {avg_response_time}"
-                )
+        # Generate report string
+        update_string = (
+            f"|{self.url}|\navailability: {availability:.0%}\n"
+            + f"max_response_time: {max_response_time}\n"
+            + f"avg_response_time: {avg_response_time}"
+        )
 
-                # Set next report time
-                report_time = report_time + datetime.timedelta(seconds=recurrence_in_seconds)
-
-                writer.write_update(update=update_string)
-
-            else:
-                await asyncio.sleep(1)
+        writer.write_update(update=update_string)
 
 
     async def monitor_website(self) -> None:

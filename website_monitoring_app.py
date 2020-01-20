@@ -8,14 +8,17 @@ class App:
     def __init__(self):
         self.console_writer = ConsoleWriter()
 
-    def start_app(self):
+    def start_app(self, schedules):
         self.console_writer.greet()
         self.websites_to_monitor = self.get_websites_to_monitor()
 
         if self.websites_to_monitor:
             try:
                 asyncio.run(
-                    self.monitor_websites(self.websites_to_monitor, self.console_writer)
+                    self.monitor_websites(
+                        self.websites_to_monitor,
+                        self.console_writer,
+                        schedules)
                 )
             except KeyboardInterrupt:
                 pass
@@ -134,15 +137,17 @@ class App:
                 continue
         return check_interval
 
-    async def monitor_websites(self,
-                               websites_to_monitor: list,
-                               console_writer: ConsoleWriter):
+    async def monitor_websites(
+        self, websites_to_monitor: list,
+        console_writer: ConsoleWriter, schedules: list
+    ):
         """
         Collects all coroutines in to a list and runs them asyncronously.
         More can be added here.
 
         PARAMETERS: websites_to_monitor is a list of Webstite instances
                     console_writer is a ConsoleWriter instance
+                    schedules: List of schedules objects
         """
 
         # Website monitoring coroutines
@@ -154,7 +159,9 @@ class App:
         # Website reporting coroutines
         for website in websites_to_monitor:
             coro = website.generate_update(
-                timespan=-300, writer=console_writer, recurrence_in_seconds=10
+                timespan=-300,
+                writer=console_writer,
+                schedules=schedules,
             )
             coros.append(coro)
 
@@ -167,5 +174,12 @@ class App:
 if __name__ == "__main__":
 
     # Instantiate app
+
+    schedule1 = {"frequency": 10, "timeframe": -600}
+
+    schedule2 = {"frequency": 60, "timeframe": -60*60}
+
+    schedules = [schedule1, schedule2]
+
     app = App()
-    app.start_app()
+    app.start_app(schedules=schedules)

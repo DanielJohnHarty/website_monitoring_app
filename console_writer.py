@@ -1,4 +1,5 @@
 import os
+import datetime
 
 class ConsoleWriter:
 
@@ -30,6 +31,7 @@ class ConsoleWriter:
         self.clear_screen()
         for msg in self.persisted_messages:
             print(msg)
+        print(datetime.datetime.now())
 
         update_to_persist = update and to_persist
 
