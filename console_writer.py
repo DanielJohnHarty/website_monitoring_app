@@ -1,8 +1,8 @@
 import os
 import datetime
 
-class ConsoleWriter:
 
+class ConsoleWriter:
     def __init__(self):
         self.clear_screen()
         self.LINE_LENGTH = 60
@@ -25,18 +25,27 @@ class ConsoleWriter:
         self.clear_screen()
         print(f"{self.SINGLE_LINE}\n{self.GOODBYE_MSG}\n{self.BOLD_LINE}")
 
-    def write_update(self, update: str = None, to_persist: bool = False):
+    def print_persisted_msgs(self):
+        for msg in self.persisted_messages:
+            print(msg)
+
+    def write_update(self, data: dict = None, to_persist: bool = False):
         """
         """
         self.clear_screen()
-        for msg in self.persisted_messages:
-            print(msg)
-        print(datetime.datetime.now())
+        self.print_persisted_msgs()
 
-        update_to_persist = update and to_persist
+        # Generate report string
+        update_string = (
+            f"|{data['url']}|\navailability: {data['availability']:.0%}\n"
+            + f"max_response_time: {data['max_response_time']}\n"
+            + f"avg_response_time: {data['avg_response_time']}"
+        )
 
-        if update:
-            print(update)
+        update_to_persist = data and to_persist
+
+        if data:
+            print(update_string)
 
         if update_to_persist:
-            self.persisted_messages.append(update)
+            self.persisted_messages.append(update_string)

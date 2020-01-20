@@ -82,27 +82,25 @@ class Website:
         for s in schedules:
             freq = s['frequency'] # How often there is an update on screen
             timeframe = s['timeframe'] # What timeframe of data to be reported on
-            await self.get_update_coro(freq, timeframe, writer)
+            await self.schedule_report(freq, timeframe, writer)
 
-    async def get_update_coro(self, delay, timeframe, writer):
+    async def schedule_report(self, delay, timeframe, writer):
         await asyncio.sleep(delay)
         self.produce_report(timeframe, writer)
-        asyncio.create_task(self.get_update_coro(delay, timeframe, writer))
+        asyncio.create_task(self.schedule_report(delay, timeframe, writer))
         return
     
     def produce_report(self, timeframe, writer):
-        availability = self.stats.get_availability(timeframe)
-        avg_response_time = self.stats.get_avg_response_time(timeframe)
-        max_response_time = self.stats.get_max_response_time(timeframe)
 
-        # Generate report string
-        update_string = (
-            f"|{self.url}|\navailability: {availability:.0%}\n"
-            + f"max_response_time: {max_response_time}\n"
-            + f"avg_response_time: {avg_response_time}"
-        )
+        data = {'url': self.url,
+                'availability':
+                self.stats.get_availability(timeframe),
+                'avg_response_time':
+                self.stats.get_avg_response_time(timeframe),
+                'max_response_time':
+                self.stats.get_max_response_time(timeframe)}
 
-        writer.write_update(update=update_string)
+        writer.write_update(data=data)
 
 
     async def monitor_website(self) -> None:
