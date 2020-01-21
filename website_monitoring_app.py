@@ -7,22 +7,27 @@ import sys
 class App:
     def __init__(self):
         self.console_writer = ConsoleWriter()
-
-    def start_app(self, schedules):
         self.console_writer.greet()
         self.websites_to_monitor = self.get_websites_to_monitor()
+        self.schedules = schedules
 
-        if self.websites_to_monitor:
-            try:
-                asyncio.run(
-                    self.monitor_websites(
-                        self.websites_to_monitor, self.console_writer, schedules
-                    )
-                )
-            except KeyboardInterrupt:
-                pass
+    def start_app(self, schedules):
 
-        self.close_app()
+        asyncio.run(self.monitor_websites())
+
+        print("n")
+
+        # if self.websites_to_monitor:
+        #     try:
+        #         asyncio.run(
+        #             self.monitor_websites(
+        #                 self.websites_to_monitor, self.console_writer, schedules
+        #             )
+        #         )
+        #     except KeyboardInterrupt:
+        #         pass
+
+        # self.close_app()
 
     def get_websites_to_monitor(self):
         """
@@ -137,9 +142,10 @@ class App:
                 continue
         return check_interval
 
-    async def monitor_websites(
-        self, websites_to_monitor: list, console_writer: ConsoleWriter, schedules: list
-    ):
+    async def create_monitor(self):
+        pass
+
+    async def monitor_websites(self):
         """
         Collects all coroutines in to a list and runs them asyncronously.
         More can be added here.
@@ -151,19 +157,20 @@ class App:
 
         # Website monitoring coroutines
         coros = [
-            asyncio.create_task(website.monitor_website())
-            for website in websites_to_monitor
+            asyncio.create_task(website.monitor_website(self.schedules))
+            for website in self.websites_to_monitor
         ]
 
         # Website reporting coroutines
-        for website in websites_to_monitor:
-            coro = website.generate_update(
-                timespan=-300, writer=console_writer, schedules=schedules
+        for website in self.websites_to_monitor:
+            coro = website.schedule_updates(
+                writer=self.console_writer, schedules=self.schedules
             )
             coros.append(coro)
 
         print(f"Beginning website monitoring...")
 
+        # loop = asyncio.get_event_loop()
         # Add to event loop
         await asyncio.gather(*coros)
 

@@ -29,8 +29,11 @@ class WebPerformanceDashboard:
         if self.data:
             yield self.data["url"]
             yield "_" * DASHBOARD_WIDTH
+            yield "Timeframe (in minutes): " + self.data["timeframe"]
+            yield "Report time: " + self.data["timestamp"]
+            yield "_" * DASHBOARD_WIDTH
             for k, v in self.data.items():
-                if not k == "url":
+                if k not in ["url", "timestamp", "timeframe"]:
                     yield f"{k} -> {v}"
 
 
@@ -57,13 +60,11 @@ class ConsoleWriter:
     def goodbye(self):
         print(f"{self.SINGLE_LINE}\n{self.GOODBYE_MSG}\n{self.BOLD_LINE}")
 
-    def update(self, data: dict = None, dashboard: WebPerformanceDashboard = None):
+    def update(self, dashboard: WebPerformanceDashboard = None):
         """
         """
-        self.clear_screen()
-        # self.print_persisted_msgs()
 
-        dashboard.data = data
+        # self.print_persisted_msgs()
 
         # for line in dashboard.yield_dashboard_lines():
         #     print(line)
@@ -90,6 +91,8 @@ class ConsoleWriter:
         yield "=" * multi_dashboard_length
 
     def write_dashboards_to_console(self):
+
+        self.clear_screen()
 
         # Print the header
         for header_line in self.yield_application_header_lines():
