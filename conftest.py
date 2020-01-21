@@ -1,5 +1,7 @@
 import pytest
+import itertools
 from web_stats import WebStat
+from console_writer import ConsoleWriter, WebPerformanceDashboard
 from website import Website
 from collections import deque
 import datetime
@@ -7,6 +9,23 @@ import datetime
 """
 Fixtures
 """
+
+
+@pytest.fixture
+def console_writer():
+    """Returns a ConsoleWriter obj with 1 db"""
+    console_writer = ConsoleWriter()
+
+    db = WebPerformanceDashboard()
+    db.data = {
+        "url": "https://learning.oreilly.com/home/",
+        "availability": 0.9285714285714286,
+        "avg_response_time": datetime.timedelta(seconds=0.92),
+        "max_response_time": datetime.timedelta(seconds=1.24),
+    }
+    console_writer.add_dashboard(db)
+
+    return console_writer
 
 
 @pytest.fixture
@@ -114,13 +133,21 @@ def WebStat_10mins_recent_datapoints(datetimes_dict):
 
     for k in ["now_minus_2", "now_minus_10", "now_plus_2", "now_plus_10"]:
 
-        ws.data_points.append({"response_code": 200,
-                                "response_time": 0.05,
-                                "received_at": datetimes_dict[k]})
+        ws.data_points.append(
+            {
+                "response_code": 200,
+                "response_time": 0.05,
+                "received_at": datetimes_dict[k],
+            }
+        )
 
     # Last datapoint increases avg
-    ws.data_points.append({"response_code": 200,
-                            "response_time": 1.5,
-                            "received_at": datetimes_dict['now']})
+    ws.data_points.append(
+        {
+            "response_code": 200,
+            "response_time": 1.5,
+            "received_at": datetimes_dict["now"],
+        }
+    )
 
     return ws

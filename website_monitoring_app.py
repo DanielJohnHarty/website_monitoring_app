@@ -16,9 +16,8 @@ class App:
             try:
                 asyncio.run(
                     self.monitor_websites(
-                        self.websites_to_monitor,
-                        self.console_writer,
-                        schedules)
+                        self.websites_to_monitor, self.console_writer, schedules
+                    )
                 )
             except KeyboardInterrupt:
                 pass
@@ -139,8 +138,7 @@ class App:
         return check_interval
 
     async def monitor_websites(
-        self, websites_to_monitor: list,
-        console_writer: ConsoleWriter, schedules: list
+        self, websites_to_monitor: list, console_writer: ConsoleWriter, schedules: list
     ):
         """
         Collects all coroutines in to a list and runs them asyncronously.
@@ -160,9 +158,7 @@ class App:
         # Website reporting coroutines
         for website in websites_to_monitor:
             coro = website.generate_update(
-                timespan=-300,
-                writer=console_writer,
-                schedules=schedules,
+                timespan=-300, writer=console_writer, schedules=schedules
             )
             coros.append(coro)
 
@@ -174,9 +170,9 @@ class App:
 
 if __name__ == "__main__":
 
-    # Define reporting schedules
+    # Define reporting schedules (in seconds))
     schedule1 = {"frequency": 10, "timeframe": -600}
-    schedule2 = {"frequency": 60, "timeframe": -60*60}
+    schedule2 = {"frequency": 60, "timeframe": -60 * 60}
     schedules = [schedule1, schedule2]
 
     # Instantiate app

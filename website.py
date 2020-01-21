@@ -56,9 +56,9 @@ class Website:
 
         return reference_datetime + datetime.timedelta(seconds=timedelta_in_seconds)
 
-    async def generate_update(self, timespan: int,
-                              writer: ConsoleWriter,
-                              schedules: list) -> None:
+    async def generate_update(
+        self, timespan: int, writer: ConsoleWriter, schedules: list
+    ) -> None:
         """
         Generates a string describing the stats
         of the Website instance over the period
@@ -81,8 +81,8 @@ class Website:
         RETURNS: None
         """
         for s in schedules:
-            freq = s['frequency'] # How often there is an update on screen
-            timeframe = s['timeframe'] # What timeframe of data to be reported on
+            freq = s["frequency"]  # How often there is an update on screen
+            timeframe = s["timeframe"]  # What timeframe of data to be reported on
             await self.schedule_report(freq, timeframe, writer)
 
     async def schedule_report(self, delay, timeframe, writer):
@@ -101,7 +101,7 @@ class Website:
         asyncio.create_task(self.schedule_report(delay, timeframe, writer))
         # After creating a new task, end the current one.
         return
-    
+
     def produce_report(self, timeframe, writer):
         """
         Retrieves updated stats from the self.stats instance
@@ -114,7 +114,7 @@ class Website:
                                 formatting reports and writing to the console
         """
         updated_stats = self.stats.get_updated_stats(timeframe=timeframe)
-        updated_stats['url'] = self.url
+        updated_stats["url"] = self.url
 
         writer.update(data=updated_stats, dashboard=self.dashboard)
 
@@ -146,9 +146,10 @@ class Website:
                     self.stats.update(datapoint)
 
                     # Move ping_time forward by the instances check_interval
-                    ping_time = ping_time +\
-                        datetime.timedelta(seconds=self.check_interval)
-                    
+                    ping_time = ping_time + datetime.timedelta(
+                        seconds=self.check_interval
+                    )
+
                 else:
                     await asyncio.sleep(1)
 

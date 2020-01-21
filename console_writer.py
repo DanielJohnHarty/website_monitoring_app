@@ -1,5 +1,4 @@
 import os
-import datetime
 
 DASHBOARD_WIDTH = 50
 
@@ -9,38 +8,39 @@ class WebPerformanceDashboard:
         self.data = {}
         self.persisted_messages = []
 
+    def yield_persisted_messages(self):
+        yield "_" * DASHBOARD_WIDTH
+        yield "Alert History"
+        yield "_" * DASHBOARD_WIDTH
+
+        if self.persisted_messages:
+            for msg in self.persisted_messages:
+                yield msg
+        else:
+            yield "..."
+
+        yield "_" * DASHBOARD_WIDTH
+
     def add_persisted_message(self, msg: str):
         self.persisted_messages.append(msg)
 
-    def yield_dashboard_lines(self):
+    def yield_dashboard_body_lines(self):
+
         if self.data:
-            yield "-" * DASHBOARD_WIDTH
-            yield f"|" + " " * 15 + f"{self.data['url']}"
-            yield "-" * DASHBOARD_WIDTH
-            yield "|" + " " * 15 + "Current Dashboard"
-            yield "-" * DASHBOARD_WIDTH
-            max_key_length = max([len(k) for k in self.data])
-
+            yield self.data["url"]
+            yield "_" * DASHBOARD_WIDTH
             for k, v in self.data.items():
-
                 if not k == "url":
-                    additional_spaces_to_add = max_key_length - len(k)
-                    yield f"| " + " " * additional_spaces_to_add + f" {k} -> {v}"
-
-            yield "-" * DASHBOARD_WIDTH
-            yield "|"+" " * 15 + "Persisted Messages"
-            for msg in self.persisted_messages:
-                yield f"| {msg}"
-            yield "-" * DASHBOARD_WIDTH
+                    yield f"{k} -> {v}"
 
 
 class ConsoleWriter:
     def __init__(self):
-        self.clear_screen()
-        self.BOLD_LINE = "=" * DASHBOARD_WIDTH
-        self.SINGLE_LINE = "-" * DASHBOARD_WIDTH
+        self.BOLD_LINE = "=" * 50
+        self.SINGLE_LINE = "-" * 50
         self.WELCOME_MSG = "Website monitoring application"
         self.GOODBYE_MSG = "Come back soon!"
+        self.APPLICATION_TITLE = "Web Monitoring Application"
         self.web_performance_dashboards = []
 
     def add_dashboard(self, wp_dashboard: WebPerformanceDashboard):
@@ -68,34 +68,126 @@ class ConsoleWriter:
         # for line in dashboard.yield_dashboard_lines():
         #     print(line)
 
-        multi_dashboard_length = DASHBOARD_WIDTH*len(self.web_performance_dashboards)
-
-        print("-" * multi_dashboard_length)
-        print("|"+" "*int(multi_dashboard_length/3) + "         Website Monitoring Application" + " "*(9+int(multi_dashboard_length/3))+"|")
         self.write_dashboards_to_console()
+
+    def yield_application_header_lines(self):
+
+        multi_dashboard_length = len(self.web_performance_dashboards) * DASHBOARD_WIDTH
+
+        title_length = len(self.APPLICATION_TITLE)
+        # start_padding = int((multi_dashboard_length - title_length) / 2)
+        # end_padding = multi_dashboard_length - title_length - start_padding - 2
+
+        yield "=" * multi_dashboard_length
+
+        yield self.format_line(
+            self.APPLICATION_TITLE,
+            close_lines=True,
+            pad_lines=True,
+            max_length=multi_dashboard_length,
+        )
+        # yield "|" + " " * start_padding + self.MUTLI_DASHBOARD_TITLE + " " * end_padding + "|"
+        yield "=" * multi_dashboard_length
 
     def write_dashboards_to_console(self):
 
-        dashboard_text_generators = [
-            db.yield_dashboard_lines() for db in self.web_performance_dashboards
+        # Print the header
+        for header_line in self.yield_application_header_lines():
+            print(header_line)
+
+        # Print dashboard bodies
+        for dashboard_body_line in self.yield_dashboard_body_lines():
+            print(dashboard_body_line)
+
+        # Print alert history
+        for alert in self.yield_alert_history_lines():
+            print(alert)
+
+    def yield_alert_history_lines(self):
+
+        dashboard_persisted_msg_generators = [
+            db.yield_persisted_messages() for db in self.web_performance_dashboards
         ]
 
-        for line_items in zip(*dashboard_text_generators):
-
-            line_to_print = ""
+        for line_items in zip(*dashboard_persisted_msg_generators):
+            multi_db_body_line = ""
             for line in line_items:
-                line_to_print += self.pad_lines(line, DASHBOARD_WIDTH)
+                multi_db_body_line += self.format_line(
+                    line, close_lines=True, pad_lines=True
+                )
 
-            if line_to_print[-1] == " ":
-                line_to_print = line_to_print[:-1] + "|"
+            yield multi_db_body_line
 
-            print(line_to_print)
+    def yield_dashboard_body_lines(self):
+        dashboard_body_generators = [
+            db.yield_dashboard_body_lines() for db in self.web_performance_dashboards
+        ]
 
-    def pad_lines(self, text_string, max_length):
+        for line_items in zip(*dashboard_body_generators):
 
-        num_additional_chars = max_length - len(text_string)
+            multi_db_body_line = ""
+            for line in line_items:
+                multi_db_body_line += self.format_line(
+                    line, close_lines=True, pad_lines=True
+                )
 
-        if num_additional_chars < 0:
-            return text_string[:DASHBOARD_WIDTH-1]
-        padded_string = text_string + " " * num_additional_chars
-        return padded_string
+            yield multi_db_body_line
+
+    def truncate_lines(self, text_string, max_length):
+        """
+        """
+        char_set = set(text_string)
+
+        # Single char lines don't need final elipsis
+        if len(char_set) == 1:
+            result = text_string[:max_length]
+
+        else:
+            result = text_string[: max_length - 3] + "..."
+
+        return result
+
+    def pad_lines(self, text_string, max_len):
+        line_length = len(text_string)
+
+        pre_padding = int((max_len - line_length) / 2) * " "
+
+        post_padding = (max_len - (line_length + len(pre_padding))) * " "
+
+        text_string = pre_padding + text_string + post_padding
+
+        return text_string
+
+    def format_line(
+        self,
+        text_string: str,
+        close_lines: bool,
+        pad_lines: bool,
+        max_length=DASHBOARD_WIDTH,
+    ) -> str:
+        """
+        Takes a text input as a single dashboard line
+        and formats.
+
+        PARAMETERS: text_string, the line to be written as
+                    part of the dashboard
+                    close_lines: bool. Should string include
+                    | characters at either end
+                    pad_lines: bool, should lines match the width
+                    of the DASHBOARD constant
+        """
+
+        # Keep 2 chars for the closing characters
+        max_length = max_length - 2 if close_lines else max_length
+
+        # Truncate if necessary
+        if max_length <= len(text_string):
+            text_string = self.truncate_lines(text_string, max_length)
+
+        if pad_lines:
+            text_string = self.pad_lines(text_string, max_length)
+
+        if close_lines:
+            text_string = "|" + text_string + "|"
+
+        return text_string
