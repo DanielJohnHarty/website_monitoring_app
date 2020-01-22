@@ -16,6 +16,63 @@ class WebStat:
         self.data_points = deque()
         self.mandatory_datapoint_keys = {"response_time", "response_code"}
         self.max_observation_window = max_observation_window
+        self.alert_coro = self.get_alert_coro()
+
+    def get_alert_coro(self):
+        alert_generator = self.alert_generator()
+        next(alert_generator)
+        return alert_generator
+
+    def alert_generator(self):
+
+        alert = None
+        awaiting_recovery = False
+        in_state_since = datetime.datetime.now()
+        site_available = None
+        latest_availability = float()
+
+        is_available = lambda availability_pct: availability_pct >= 0.8
+
+        while True:
+            # % value. Sent to the coroutine as a float
+            # The previous cycle's alert is yielded back to the caller
+            latest_availability = yield alert
+
+            # Reset alert to None each loop
+            alert = None
+
+            # Log change or not before updating availability bool
+            availability_state_change = site_available != is_available(
+                latest_availability
+            )
+
+            # Bench,ark for how long in state
+            if availability_state_change:
+                in_state_since = datetime.datetime.now()
+
+            site_available = is_available(latest_availability)
+
+            time_in_state = datetime.datetime.now() - in_state_since
+
+            # change_of_availability = site_available != updated_site_availability
+            more_than_2_minutes_in_state = time_in_state.seconds > 120
+
+            # print(
+            #    f"site_available:{site_available}, awaiting_recovery:{awaiting_recovery},in_state_since:{in_state_since},latest_availability:{latest_availability},time_in_state:{time_in_state},more_than_2_minutes_in_state:{more_than_2_minutes_in_state}"
+            # )
+            # This should trigger an alert. Its been unavailable for 2 minutes
+            if (
+                not site_available
+                and more_than_2_minutes_in_state
+                and not awaiting_recovery
+            ):
+                alert = f"Site is down {datetime.datetime.now()}"
+                awaiting_recovery = True
+
+            # This should trigger an alert
+            if site_available and more_than_2_minutes_in_state and awaiting_recovery:
+                alert = f"Site is back {datetime.datetime.now()}"
+                awaiting_recovery = False
 
     def get_datapoints_since_time_boundary(self, threshold_seconds_ago: int):
         """

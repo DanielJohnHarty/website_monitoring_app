@@ -17,7 +17,6 @@ class Website:
         self.url = url
         self.check_interval = check_interval
         self.stats = WebStat(max_observation_window)
-
         self.dashboard = WebPerformanceDashboard()
 
     def validate_url(self, url):
@@ -30,6 +29,12 @@ class Website:
     def validate_check_interval(self, check_interval):
         if check_interval < 1:
             raise Exception("check_interval must be a positive integer")
+
+    def update_alert_process(self, availability: float):
+        alert = self.stats.alert_coro.send(availability)
+        print(f"{datetime.datetime.now()},{availability}, {alert}")
+        if alert:
+            self.dashboard.persisted_messages.append(alert)
 
     async def produce_report(self, timeframe, writer):
         """
@@ -52,6 +57,10 @@ class Website:
         updated_stats["timeframe"] = timeframe_as_minutes
 
         self.dashboard.data = updated_stats
+
+        # Generator - returns qn alert or None as appropriate
+        if updated_stats["availability"]:
+            self.update_alert_process(updated_stats["availability"])
 
         writer.write_dashboards_to_console()
         await asyncio.sleep(0)
@@ -83,6 +92,7 @@ class Website:
         A coroutine pulling update and reporting tasks from the queues
         """
 
+        self.writer = writer
         # Data update process
         coros = [self.periodic_data_update_process()]
 

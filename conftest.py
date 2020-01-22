@@ -12,6 +12,34 @@ Fixtures
 
 
 @pytest.fixture
+def alert_datetimes():
+    d = {
+        "25_0": datetime.datetime(2020, 1, 22, 12, 25, 0),
+        "25_30": datetime.datetime(2020, 1, 22, 12, 25, 30),
+        "26_0": datetime.datetime(2020, 1, 22, 12, 26, 0),
+        "26_30": datetime.datetime(2020, 1, 22, 12, 26, 30),
+        "27_0": datetime.datetime(2020, 1, 22, 12, 27, 0),
+        "27_30": datetime.datetime(2020, 1, 22, 12, 27, 30),
+        "28_0": datetime.datetime(2020, 1, 22, 12, 28, 0),
+        "28_30": datetime.datetime(2020, 1, 22, 12, 28, 30),
+        "29_0": datetime.datetime(2020, 1, 22, 12, 29, 0),
+        "29_30": datetime.datetime(2020, 1, 22, 12, 29, 30),
+        "30_0": datetime.datetime(2020, 1, 22, 12, 30, 0),
+        "30_30": datetime.datetime(2020, 1, 22, 12, 30, 30),
+        "31_0": datetime.datetime(2020, 1, 22, 12, 31, 0),
+        "31_30": datetime.datetime(2020, 1, 22, 12, 31, 30),
+        "32_0": datetime.datetime(2020, 1, 22, 12, 32, 0),
+    }
+    return d
+
+
+@pytest.fixture
+def alert_generator():
+    wb = WebStat()
+    return wb.alert_generator()
+
+
+@pytest.fixture
 def console_writer():
     """Returns a ConsoleWriter obj with 1 db"""
     console_writer = ConsoleWriter()
@@ -151,3 +179,10 @@ def WebStat_10mins_recent_datapoints(datetimes_dict):
     )
 
     return ws
+
+
+@pytest.fixture
+def writer():
+    w = ConsoleWriter()
+    return w
+
