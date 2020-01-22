@@ -2,6 +2,8 @@ import asyncio
 from website import Website
 from console_writer import ConsoleWriter
 import sys
+import signal
+import functools
 
 
 class App:
@@ -11,9 +13,37 @@ class App:
         self.websites_to_monitor = self.get_websites_to_monitor()
         self.schedules = schedules
 
-    def start_app(self, schedules):
+    async def attach_shutdown_signals(self):
+        # Only functional in linux
+        signals = ["SIGTERM", "SIGINT"]
+        loop = asyncio.get_running_loop()
 
-        asyncio.run(self.monitor_websites())
+        for signame in signals:
+
+            loop.add_signal_handler(
+                getattr(signal, signame), functools.partial(self.shutdown, loop)
+            )
+
+        await asyncio.sleep(0)
+
+    def shutdown(self, loop):
+
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+
+        for task in tasks:
+            task.cancel()
+
+        asyncio.gather(*tasks)
+        loop.stop()
+
+    def start_app(self, schedules):
+        try:
+            asyncio.run(self.monitor_websites())
+        except KeyboardInterrupt:
+            # Only rough shutdown for Windows
+            pass
+        finally:
+            self.console_writer.goodbye()
 
     def get_websites_to_monitor(self):
         """
@@ -128,9 +158,6 @@ class App:
                 continue
         return check_interval
 
-    async def create_monitor(self):
-        pass
-
     async def monitor_websites(self):
         """
         Collects all coroutines in to a list and runs them asyncronously.
@@ -150,6 +177,10 @@ class App:
 
         print(f"Beginning website monitoring...")
 
+        # Better shutdozn for linux users
+        if "linux" in sys.platform:
+            coros.appen(self.attach_shutdown_signals())
+
         await asyncio.gather(*coros)
 
 
@@ -163,3 +194,4 @@ if __name__ == "__main__":
     # Instantiate app
     app = App()
     app.start_app(schedules=schedules)
+
