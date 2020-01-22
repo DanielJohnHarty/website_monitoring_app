@@ -3,8 +3,9 @@ Console python app to report various stats on websites input by the user.
 
 ### Dependencies
 - Python 3.7 (Anaconda distribution)
-- [Freezegun](https://github.com/spulec/freezegun)
 - [Httpx](https://www.python-httpx.org/)
+- [Freezegun](https://github.com/spulec/freezegun) *for testing*
+
 - [Pytest](http://pytest.com/) *for testing*
 - *Full requirements in requirements.txt
 
