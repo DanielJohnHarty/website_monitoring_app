@@ -15,8 +15,6 @@ class App:
 
         asyncio.run(self.monitor_websites())
 
-        print("n")
-
     def get_websites_to_monitor(self):
         """
         Enables user to input website url and check_interval
@@ -152,8 +150,6 @@ class App:
 
         print(f"Beginning website monitoring...")
 
-        # loop = asyncio.get_event_loop()
-        # Add to event loop
         await asyncio.gather(*coros)
 
 
