@@ -34,7 +34,12 @@ class WebPerformanceDashboard:
             yield "_" * DASHBOARD_WIDTH
             for k, v in self.data.items():
                 if k not in ["url", "timestamp", "timeframe"]:
-                    yield f"{k} -> {v}"
+                    if v is None:
+                        yield f"{k} -> Please wait"
+                    elif k == "availability":
+                        yield f"{k} -> " + "{0:.0%}".format(v)
+                    else:
+                        yield f"{k} -> {v}"
 
 
 class ConsoleWriter:
