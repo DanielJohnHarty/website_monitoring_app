@@ -156,17 +156,24 @@ class App:
         """
 
         # Website monitoring coroutines
+        # coros = [
+        #     asyncio.create_task(website.monitor_website(self.schedules))
+        #     for website in self.websites_to_monitor
+        # ]
+
+        # # Website reporting coroutines
+        # for website in self.websites_to_monitor:
+        #     coro = website.schedule_updates(
+        #         writer=self.console_writer, schedules=self.schedules
+        #     )
+        #     coros.append(coro)
+
         coros = [
-            asyncio.create_task(website.monitor_website(self.schedules))
+            asyncio.create_task(
+                website.all_async_tasks(self.schedules, self.console_writer)
+            )
             for website in self.websites_to_monitor
         ]
-
-        # Website reporting coroutines
-        for website in self.websites_to_monitor:
-            coro = website.schedule_updates(
-                writer=self.console_writer, schedules=self.schedules
-            )
-            coros.append(coro)
 
         print(f"Beginning website monitoring...")
 

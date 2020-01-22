@@ -123,13 +123,10 @@ class Website:
         writer.write_dashboards_to_console()
         await asyncio.sleep(0)
 
-    async def check_website_after_delay(self, delay):
-        await asyncio.sleep(delay)
-
+    async def update(self):
         r = await self.ping_url(self.url)
         datapoint = {"response_code": r.status_code, "response_time": r.elapsed}
         self.stats.update(datapoint)
-        asyncio.create_task(self.check_website_after_delay(delay))
 
     async def monitor_website(self, schedules) -> None:
         """
@@ -146,6 +143,45 @@ class Website:
         # timef= data timeframe to use
         for schedule in schedules:
             await self.check_website_after_delay(schedule["frequency"])
+
+    async def periodic_data_update_process(self):
+        """
+        Simply updates stats every check interval period
+        """
+        while True:
+            await asyncio.sleep(self.check_interval)
+            await asyncio.create_task(self.update())
+
+    async def periodic_report_production_process(self, frequency, timeframe, writer):
+        """
+        Coroutine to schedule a report every {frequency} seconds
+        using data over the last {timeframe} minutes
+        """
+        while True:
+            await asyncio.sleep(frequency)
+            await asyncio.create_task(self.produce_report(timeframe, writer))
+
+    async def all_async_tasks(self, schedules: dict, writer: ConsoleWriter):
+        """
+        A coroutine pulling update and reporting tasks from the queues
+        """
+
+        # Data update process
+        coros = [self.periodic_data_update_process()]
+
+        for schedule in schedules:
+
+            freq = schedule["frequency"]
+            timef = schedule["timeframe"]
+
+            coros.extend(
+                [
+                    # Reporting Process
+                    self.periodic_report_production_process(freq, timef, writer)
+                ]
+            )
+
+        await asyncio.gather(*coros)
 
     async def ping_url(self, url) -> None:
         """
