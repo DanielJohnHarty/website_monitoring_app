@@ -17,18 +17,6 @@ class App:
 
         print("n")
 
-        # if self.websites_to_monitor:
-        #     try:
-        #         asyncio.run(
-        #             self.monitor_websites(
-        #                 self.websites_to_monitor, self.console_writer, schedules
-        #             )
-        #         )
-        #     except KeyboardInterrupt:
-        #         pass
-
-        # self.close_app()
-
     def get_websites_to_monitor(self):
         """
         Enables user to input website url and check_interval
@@ -154,19 +142,6 @@ class App:
                     console_writer is a ConsoleWriter instance
                     schedules: List of schedules objects
         """
-
-        # Website monitoring coroutines
-        # coros = [
-        #     asyncio.create_task(website.monitor_website(self.schedules))
-        #     for website in self.websites_to_monitor
-        # ]
-
-        # # Website reporting coroutines
-        # for website in self.websites_to_monitor:
-        #     coro = website.schedule_updates(
-        #         writer=self.console_writer, schedules=self.schedules
-        #     )
-        #     coros.append(coro)
 
         coros = [
             asyncio.create_task(

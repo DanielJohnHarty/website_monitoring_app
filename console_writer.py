@@ -60,24 +60,11 @@ class ConsoleWriter:
     def goodbye(self):
         print(f"{self.SINGLE_LINE}\n{self.GOODBYE_MSG}\n{self.BOLD_LINE}")
 
-    def update(self, dashboard: WebPerformanceDashboard = None):
-        """
-        """
-
-        # self.print_persisted_msgs()
-
-        # for line in dashboard.yield_dashboard_lines():
-        #     print(line)
-
-        self.write_dashboards_to_console()
-
     def yield_application_header_lines(self):
 
         multi_dashboard_length = len(self.web_performance_dashboards) * DASHBOARD_WIDTH
 
         title_length = len(self.APPLICATION_TITLE)
-        # start_padding = int((multi_dashboard_length - title_length) / 2)
-        # end_padding = multi_dashboard_length - title_length - start_padding - 2
 
         yield "=" * multi_dashboard_length
 
@@ -87,7 +74,7 @@ class ConsoleWriter:
             pad_lines=True,
             max_length=multi_dashboard_length,
         )
-        # yield "|" + " " * start_padding + self.MUTLI_DASHBOARD_TITLE + " " * end_padding + "|"
+
         yield "=" * multi_dashboard_length
 
     def write_dashboards_to_console(self):
