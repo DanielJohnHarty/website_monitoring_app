@@ -8,10 +8,14 @@ import functools
 
 class App:
     def __init__(self):
+
+        # Single instance of ConsoleWriter for application.
+        # Only object writing to the console
         self.console_writer = ConsoleWriter()
         self.console_writer.greet()
+
+        # User input
         self.websites_to_monitor = self.get_websites_to_monitor()
-        self.schedules = schedules
 
     async def attach_shutdown_signals(self):
         # Only functional in linux
@@ -27,6 +31,12 @@ class App:
         await asyncio.sleep(0)
 
     def shutdown(self, loop):
+        """
+        Shutdown function. Called automatically on 
+        linux devices on console termination. API not implemented for Windows.
+
+        PARAMETERS: loop, the current event loop.
+        """
 
         tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
 
@@ -37,6 +47,12 @@ class App:
         loop.stop()
 
     def start_app(self, schedules):
+
+        # Reporting frequency and timeframe
+        self.schedules = schedules
+
+        # Start an event loop running the
+        # highest level coroutine in the app
         try:
             asyncio.run(self.monitor_websites())
         except KeyboardInterrupt:
@@ -68,10 +84,6 @@ class App:
                 break
 
         return websites
-
-    def close_app(self):
-        self.console_writer.goodbye()
-        sys.exit()
 
     def create_website(self):
         """
@@ -160,14 +172,14 @@ class App:
 
     async def monitor_websites(self):
         """
-        Collects all coroutines in to a list and runs them asyncronously.
-        More can be added here.
-
-        PARAMETERS: websites_to_monitor is a list of Webstite instances
-                    console_writer is a ConsoleWriter instance
-                    schedules: List of schedules objects
+        Collects all coroutines in to a 
+        list and creates tasks to run them
+        in the existing event loop.
         """
 
+        # website.all_async_tasks kicks off all
+        # async processes necessary to monitor
+        # and report on that website instance
         coros = [
             asyncio.create_task(
                 website.all_async_tasks(self.schedules, self.console_writer)
@@ -179,7 +191,7 @@ class App:
 
         # Better shutdozn for linux users
         if "linux" in sys.platform:
-            coros.appen(self.attach_shutdown_signals())
+            coros.append(self.attach_shutdown_signals())
 
         await asyncio.gather(*coros)
 

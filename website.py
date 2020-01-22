@@ -21,28 +21,39 @@ class Website:
 
     def validate_url(self, url):
         try:
-            # Test url connection
             _ = httpx.get(url)
         except Exception:
             raise Exception("URL error")
 
-    def validate_check_interval(self, check_interval):
+    def validate_check_interval(self, check_interval: int):
+        """
+        Check_interval must be a +ve integer
+        """
         if check_interval < 1:
             raise Exception("check_interval must be a positive integer")
 
     def update_alert_process(self, availability: float):
-        alert = self.stats.alert_coro.send(availability)
-        print(f"{datetime.datetime.now()},{availability}, {alert}")
-        if alert:
-            self.dashboard.persisted_messages.append(alert)
+        """
+        Takes as availability % and sends it to the self.stats Stat
+        instance. An alert will be returned if alert criteria are triggered
 
-    async def produce_report(self, timeframe, writer):
+        RETURNS: String or None
+        """
+        # Don't send a None value
+        # but 0.0 is ok
+        if availability is not None:
+            alert = self.stats.alert_coro.send(availability)
+            if alert:
+                # Alerts are saved to the dashboard
+                self.dashboard.persisted_messages.append(alert)
+
+    async def produce_report(self, timeframe: int, writer: ConsoleWriter):
         """
         Retrieves updated stats from the self.stats instance
         and forwards to the ConsoleWriter instance writer
         for formatting before writing to the console
 
-        PARAMETERS: timespan: In seconds as int e.g. 
+        PARAMETERS: timeframe: In seconds as int e.g. 
                               -60 datapoints from previous minute
                               writer: ConsoleWriter instance responsible 
                               formatting reports and writing to the console
@@ -50,24 +61,24 @@ class Website:
 
         updated_stats = self.stats.get_updated_stats(timeframe=timeframe)
         updated_stats["url"] = self.url
-
-        timeframe_as_minutes = str(abs(int(timeframe / 60)))
-        timestamp = datetime.datetime.now().strftime("%c")
+        timestamp = datetime.datetime.now().strftime("%c")  # Local time format
         updated_stats["timestamp"] = timestamp
-        updated_stats["timeframe"] = timeframe_as_minutes
+        updated_stats["timeframe"] = timeframe
 
         self.dashboard.data = updated_stats
 
-        # Generator - returns qn alert or None as appropriate
-        if updated_stats["availability"]:
-            self.update_alert_process(updated_stats["availability"])
+        # Adds alert message if needed
+        self.update_alert_process(updated_stats["availability"])
 
+        # Outputs all dashboards attached to the writer
         writer.write_dashboards_to_console()
         await asyncio.sleep(0)
 
     async def update(self):
         r = await self.ping_url(self.url)
         datapoint = {"response_code": r.status_code, "response_time": r.elapsed}
+        # Only updating stats here.
+        # No query until reports are generated.
         self.stats.update(datapoint)
 
     async def periodic_data_update_process(self):
@@ -78,10 +89,16 @@ class Website:
             await asyncio.sleep(self.check_interval)
             await asyncio.create_task(self.update())
 
-    async def periodic_report_production_process(self, frequency, timeframe, writer):
+    async def periodic_report_production_process(
+        self, frequency: int, timeframe: int, writer: ConsoleWriter
+    ):
         """
         Coroutine to schedule a report every {frequency} seconds
-        using data over the last {timeframe} minutes
+        using data over the last {timeframe} minutes.
+
+        PARAMETERS: frequency and timeframe fixed for challenge
+                    but can be changed in 
+                    website_monitoring_application instantiation
         """
         while True:
             await asyncio.sleep(frequency)
@@ -89,13 +106,22 @@ class Website:
 
     async def all_async_tasks(self, schedules: dict, writer: ConsoleWriter):
         """
-        A coroutine pulling update and reporting tasks from the queues
-        """
+        A coroutine pulling update and reporting tasks from the queues.
 
+        schedules are dicts with the following format:
+
+            schedule1 = {"frequency": 10, "timeframe": -600}
+            schedule2 = {"frequency": 60, "timeframe": -60 * 60}
+
+        Fixed for the challenge.
+        """
+        # Every Website instance shares the same writer instance
         self.writer = writer
+
         # Data update process
         coros = [self.periodic_data_update_process()]
 
+        # Adds task for each scheduled report
         for schedule in schedules:
 
             freq = schedule["frequency"]
@@ -112,9 +138,9 @@ class Website:
 
     async def ping_url(self, url) -> None:
         """
-        Responsible for making a single reauest to
-        self.url after the delay and then updating
-        self.stats with the results
+        Responsible for making a single request to
+        self.url after the delay and returning
+        the response
 
         PARAMETERS: delay:int, how many seconds to 
                     wait until execution

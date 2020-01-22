@@ -2,6 +2,7 @@ import datetime
 import pytest
 from freezegun import freeze_time
 import asyncio
+from website import Website
 
 """
 Fixtures in conftest.py
@@ -161,7 +162,37 @@ d = {
 
 
 # List of (availability %, datetime) then expected alert result
-input_params_alerts_and_persisted_msg_count = [
+input_params_alerts = [
+    ([(1.0, d["25_0"]), (0.79, d["25_30"]), (0.79, d["28_0"])], "site is down", 1),
+    (
+        [(0.0, d["25_0"]), (0.0, d["27_30"]), (0.85, d["28_0"]), (0.85, d["30_30"])],
+        "site is back",
+        2,
+    ),
+    (
+        [(0.0, d["25_0"]), (0.0, d["29_30"]), (0.85, d["32_0"]), (0.85, d["34_30"])],
+        "site is back",
+        2,
+    ),
+]
+
+
+@pytest.mark.parametrize("gen_updates, expected_alert, _", input_params_alerts)
+def test_alert_generator_alert_expected(WebStat_2mins, gen_updates, expected_alert, _):
+    alert = None
+
+    for i in gen_updates:
+        av = i[0]
+        dt = i[1]
+
+        with freeze_time(dt):
+            alert = WebStat_2mins.alert_coro.send(av)
+
+    assert alert.lower().startswith(expected_alert)
+
+
+# List of (availability %, datetime) then expected alert result
+expected_num_persisted_msgs = [
     ([(1.0, d["25_0"]), (0.79, d["25_30"]), (0.79, d["28_0"])], "site is down", 1),
     (
         [(0.0, d["25_0"]), (0.0, d["27_30"]), (0.85, d["28_0"]), (0.85, d["30_30"])],
@@ -177,26 +208,12 @@ input_params_alerts_and_persisted_msg_count = [
 
 
 @pytest.mark.parametrize(
-    "gen_updates, expected_alert, _", input_params_alerts_and_persisted_msg_count
+    "gen_updates, alert, expected_num_persisted_msgs", expected_num_persisted_msgs
 )
-def test_alert_generator_alert_expected(WebStat_2mins, gen_updates, expected_alert, _):
-    alert = None
+def test_alerts_are_persisted(website, gen_updates, alert, expected_num_persisted_msgs):
 
-    for i in gen_updates:
-        av = i[0]
-        dt = i[1]
-
-        with freeze_time(dt):
-            alert = WebStat_2mins.alert_coro.send(av)
-
-    assert alert.lower().startswith(expected_alert)
-
-
-@pytest.mark.parametrize(
-    "gen_updates, _, expected_num_persisted_msgs",
-    input_params_alerts_and_persisted_msg_count,
-)
-def test_alerts_are_persisted(website, gen_updates, _, expected_num_persisted_msgs):
+    website.dashboard.persisted_messages = []
+    website.stats.alert_coro = website.stats.get_alert_coro()
 
     for i in gen_updates:
         av = i[0]

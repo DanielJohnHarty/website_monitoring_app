@@ -147,7 +147,7 @@ def datetimes_dict(year=2019, month=11, day=25, hour=23, minute=44, second=33):
     return d
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def website():
     """Returns a an empty generator built from a deque obj"""
     website = Website(url="http://google.com", check_interval=5)
@@ -185,4 +185,3 @@ def WebStat_10mins_recent_datapoints(datetimes_dict):
 def writer():
     w = ConsoleWriter()
     return w
-

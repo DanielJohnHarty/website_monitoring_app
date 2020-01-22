@@ -1,14 +1,30 @@
 import os
 
+
 DASHBOARD_WIDTH = 50
 
 
 class WebPerformanceDashboard:
+    """
+    The WebPerformanceDashboard is the producer of
+    content to be written to the console. No stats or
+    complex text formatting here.
+    """
+
     def __init__(self):
+
         self.data = {}
         self.persisted_messages = []
 
+        # Convert seconds to minutes. Returns positive int.
+        secToMin = lambda seconds: abs(int(seconds / 60))
+
     def yield_persisted_messages(self):
+        """
+        Persisted messages can be alerts
+        to be printed to the report 
+        indefinitely
+        """
         yield "_" * DASHBOARD_WIDTH
         yield "Alert History"
         yield "_" * DASHBOARD_WIDTH
@@ -25,24 +41,39 @@ class WebPerformanceDashboard:
         self.persisted_messages.append(msg)
 
     def yield_dashboard_body_lines(self):
-
+        """
+        Iterates over self.data and yields
+        text strings to be output. No Text
+        formatting or alignment here.
+        """
         if self.data:
             yield self.data["url"]
             yield "_" * DASHBOARD_WIDTH
-            yield "Timeframe (in minutes): " + self.data["timeframe"]
+            yield "Timeframe (in minutes): {}".format(secToMin(self.data["timeframe"]))
             yield "Report time: " + self.data["timestamp"]
             yield "_" * DASHBOARD_WIDTH
             for k, v in self.data.items():
+                # Here I skip certain keys
                 if k not in ["url", "timestamp", "timeframe"]:
+
                     if v is None:
+                        # If there is no value yet
                         yield f"{k} -> Please wait"
+                    # Custom % formatting for availability
                     elif k == "availability":
                         yield f"{k} -> " + "{0:.0%}".format(v)
+
+                    # Basic text format
                     else:
                         yield f"{k} -> {v}"
 
 
 class ConsoleWriter:
+    """
+    ConsoleWriter manages the writing to the console
+    of multiple dashboards. It enforces text formatting.
+    """
+
     def __init__(self):
         self.BOLD_LINE = "=" * 50
         self.SINGLE_LINE = "-" * 50
@@ -55,21 +86,33 @@ class ConsoleWriter:
         self.web_performance_dashboards.append(wp_dashboard)
 
     def clear_screen(self):
+        """
+        Clears the console screen.
+        """
         os.system("cls -y")
 
     def greet(self):
+        """
+        Application intro
+        """
         self.clear_screen()
         greeting = f"{self.BOLD_LINE}\n{self.WELCOME_MSG}\n{self.SINGLE_LINE}"
         print(greeting)
 
     def goodbye(self):
+        """
+        Application outro
+        """
         print(f"{self.SINGLE_LINE}\n{self.GOODBYE_MSG}\n{self.BOLD_LINE}")
 
     def yield_application_header_lines(self):
-
+        """
+        Yields console text strings one by one
+        while represent single or multiple dashboards
+        text representation. 
+        """
+        # The lenght of a header covering all dashboards
         multi_dashboard_length = len(self.web_performance_dashboards) * DASHBOARD_WIDTH
-
-        title_length = len(self.APPLICATION_TITLE)
 
         yield "=" * multi_dashboard_length
 
@@ -83,10 +126,16 @@ class ConsoleWriter:
         yield "=" * multi_dashboard_length
 
     def write_dashboards_to_console(self):
+        """
+        Yields console text strings one by one
+        while represent single or multiple dashboards
+        text representation. 
+        """
 
+        # Clear screen before outputting
         self.clear_screen()
 
-        # Print the header
+        # Print the multi dashboard header
         for header_line in self.yield_application_header_lines():
             print(header_line)
 
@@ -98,8 +147,20 @@ class ConsoleWriter:
         for alert in self.yield_alert_history_lines():
             print(alert)
 
-    def yield_alert_history_lines(self):
+        # Avoid blinking cursor on the output
+        print("\n")
 
+    def yield_alert_history_lines(self):
+        """
+        Yields console text strings one by one
+        while represent single or multiple dashboards
+        text representation. 
+
+        History of alerts yielded here.
+        """
+
+        #  Concatenate the lienes from each dashboard
+        # and format before printing multi dashboard line
         dashboard_persisted_msg_generators = [
             db.yield_persisted_messages() for db in self.web_performance_dashboards
         ]
@@ -114,6 +175,16 @@ class ConsoleWriter:
             yield multi_db_body_line
 
     def yield_dashboard_body_lines(self):
+        """
+        Yields console text strings one by one
+        while represent single or multiple dashboards
+        text representation. 
+
+        Main body lines yielded here.
+        """
+
+        #  Concatenate the lienes from each dashboard
+        # and format before printing multi dashboard line
         dashboard_body_generators = [
             db.yield_dashboard_body_lines() for db in self.web_performance_dashboards
         ]
@@ -130,10 +201,12 @@ class ConsoleWriter:
 
     def truncate_lines(self, text_string, max_length):
         """
+        Cuts strings to fit the max length and adds a ...
+        at the end.
         """
-        char_set = set(text_string)
 
         # Single char lines don't need final elipsis
+        char_set = set(text_string)
         if len(char_set) == 1:
             result = text_string[:max_length]
 
@@ -143,6 +216,10 @@ class ConsoleWriter:
         return result
 
     def pad_lines(self, text_string, max_len):
+        """
+        Adds spaces at start and end of string
+        to force max length
+        """
         line_length = len(text_string)
 
         pre_padding = int((max_len - line_length) / 2) * " "
@@ -161,8 +238,8 @@ class ConsoleWriter:
         max_length=DASHBOARD_WIDTH,
     ) -> str:
         """
-        Takes a text input as a single dashboard line
-        and formats.
+        Takes a text input and formats it. Used to build
+        multi dashboard outputs.
 
         PARAMETERS: text_string, the line to be written as
                     part of the dashboard

@@ -3,9 +3,18 @@ import datetime
 
 
 class WebStat:
+    """
+    WebStat holds enough datapoints to report on
+    the maximum observation window (default is -600 seconds
+    i.e. 10 minutes ago).
+
+    Provides methods to generate statistics and a coroutine
+    which acts as a state machine, returning warnings if
+    certain conditions are met.
+    """
+
     def __init__(self, max_observation_window: int = -600):
         """
-
         PARAMETERS:
         max_observation_window:
             A negative integer representing the number of seconds
@@ -19,17 +28,41 @@ class WebStat:
         self.alert_coro = self.get_alert_coro()
 
     def get_alert_coro(self):
+        """
+        Returns a primed alert coroutine.
+        """
         alert_generator = self.alert_generator()
         next(alert_generator)
         return alert_generator
 
     def alert_generator(self):
+        """
+        Receives availability values as floats.
+        Calculates whether received availability
+        should trigger an alert message to be sent 
+        back to the caller.
 
+        Condition 1:
+        If availability is less than 80% for at least 2
+        minutes, send an alert that the site is down.
+
+        Condition 2:
+        If a down website is at 80% or more availability
+        for at least 2 minutes, send an alert that is is
+        no longer down.
+        """
+
+        # No alert exists yet
         alert = None
+
+        # Set to True after condition 1
         awaiting_recovery = False
+
+        # Tracks time in a particular state
         in_state_since = datetime.datetime.now()
+
+        # Is availability higher than 80%
         site_available = None
-        latest_availability = float()
 
         is_available = lambda availability_pct: availability_pct >= 0.8
 
@@ -41,12 +74,12 @@ class WebStat:
             # Reset alert to None each loop
             alert = None
 
-            # Log change or not before updating availability bool
+            # Did the state change since last time?
             availability_state_change = site_available != is_available(
                 latest_availability
             )
 
-            # Bench,ark for how long in state
+            # Reset each time state changes
             if availability_state_change:
                 in_state_since = datetime.datetime.now()
 
@@ -54,13 +87,9 @@ class WebStat:
 
             time_in_state = datetime.datetime.now() - in_state_since
 
-            # change_of_availability = site_available != updated_site_availability
             more_than_2_minutes_in_state = time_in_state.seconds > 120
 
-            # print(
-            #    f"site_available:{site_available}, awaiting_recovery:{awaiting_recovery},in_state_since:{in_state_since},latest_availability:{latest_availability},time_in_state:{time_in_state},more_than_2_minutes_in_state:{more_than_2_minutes_in_state}"
-            # )
-            # This should trigger an alert. Its been unavailable for 2 minutes
+            # Condition 1
             if (
                 not site_available
                 and more_than_2_minutes_in_state
@@ -69,7 +98,7 @@ class WebStat:
                 alert = f"Site is down {datetime.datetime.now()}"
                 awaiting_recovery = True
 
-            # This should trigger an alert
+            # Condition 2
             if site_available and more_than_2_minutes_in_state and awaiting_recovery:
                 alert = f"Site is back {datetime.datetime.now()}"
                 awaiting_recovery = False
@@ -142,7 +171,7 @@ class WebStat:
 
         try:
             avg_response_time = response_time_sum / datapoint_count
-        except (ZeroDivisionError, TypeError) as e:
+        except (ZeroDivisionError, TypeError):
             avg_response_time = None
 
         return avg_response_time
@@ -201,6 +230,7 @@ class WebStat:
         RETURNS: None
         """
 
+        # Only accepts complient datapoints
         correct_structure = self.mandatory_datapoint_keys == set(new_datapoint)
 
         if correct_structure:
@@ -222,8 +252,6 @@ class WebStat:
         defined by the threshold_minutes_ago parameter. 
         If the threshold_minutes_ago parameter is not passed,
         the class instance's max_observed_time is used as the threshold.
-
-        
 
         PARAMETERS: datapoint_datetime
         RETURNS: bool
