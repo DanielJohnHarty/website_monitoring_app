@@ -17,7 +17,7 @@ class WebPerformanceDashboard:
         self.persisted_messages = []
 
         # Convert seconds to minutes. Returns positive int.
-        secToMin = lambda seconds: abs(int(seconds / 60))
+        self.secToMin = lambda seconds: abs(int(seconds / 60))
 
     def yield_persisted_messages(self):
         """
@@ -49,7 +49,9 @@ class WebPerformanceDashboard:
         if self.data:
             yield self.data["url"]
             yield "_" * DASHBOARD_WIDTH
-            yield "Timeframe (in minutes): {}".format(secToMin(self.data["timeframe"]))
+            yield "Timeframe (in minutes): {}".format(
+                self.secToMin(self.data["timeframe"])
+            )
             yield "Report time: " + self.data["timestamp"]
             yield "_" * DASHBOARD_WIDTH
             for k, v in self.data.items():
