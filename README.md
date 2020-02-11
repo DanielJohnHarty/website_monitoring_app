@@ -15,7 +15,9 @@ Console python app to report various stats on websites input by the user.
 
 1. **git clone https://github.com/DanielJohnHarty/website_monitoring_app.git**
 
-2.  **pip install -r requirements.txt**
+2. **cd website_monitoring_app**
+
+3.  **pip install -r requirements.txt**
 
 3.  **python web_monitoring_app.py**
 
